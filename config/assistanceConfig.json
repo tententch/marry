@@ -1,0 +1,17 @@
+{   
+    "apikey":"",   
+    "ai":{
+        "mary":{
+            "id":"", 
+            "voice":"nova"
+            },
+        "elizabeth":{
+            "id":"", 
+            "voice":"shimmer"
+            },
+        "ferdinand":{
+            "id":"", 
+            "voice":"onyx"
+            }
+    }
+}
