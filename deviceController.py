@@ -1,24 +1,39 @@
 from yeelight import *
 from ppadb.client import Client as AdbClient
+import speech_recognition as sr
+
 import pandas as pd
 import time
 from utils import load_json_file
+import threading
+import json
 
-
+recognizer = sr.Recognizer()
 controllerJson = load_json_file("config/adbConfig.json")
 
 class control:
     def __init__(self):
         self.command_bulbdevices = discover_bulbs()
         self.devices=  pd.DataFrame(self.command_bulbdevices)
-
-        # Connect to the ADB server
         self.client = AdbClient(host=controllerJson["host"], port=controllerJson["port"])
+        self.text = ""
+
+
+    def mic(self):
+        with sr.Microphone() as source:
+            print("Say something in Thai:")
+            audio = recognizer.listen(source,phrase_time_limit=5)
+        try:
+            self.text = recognizer.recognize_google(audio, language="th-TH")
+            return True
+        except:
+            return False
+
 
     def command_bulb(self,bulb, control):
         bulb.turn_on()
         if "set_brightness" in control:
-            if control["set_brightness"] == 0:
+            if control["set_brightness"] <1:
                 bulb.turn_off()
             else:
                 bulb.turn_on()
@@ -29,6 +44,33 @@ class control:
             else:
                 bulb.turn_off()
 
+    def iot(self,json_obj):
+        threads = []
+        if json_obj[0] == "{":
+            json_obj = json.loads(json_obj)
+            
+            if "tv" in json_obj:
+                if "query" in json_obj["tv"]:
+
+                    control = json_obj["tv"]
+                    print("TV Controling: "+ str(control))
+
+                    thread = threading.Thread(target=self.play_youtube_video_on_chromecast, args=(control["query"],control["mode"]))
+                    threads.append(thread)
+                    thread.start()
+
+            if "light" in json_obj:
+                control = json_obj["light"]
+                if control != {}:
+                    print("IoT Controling: "+ str(control))
+                    for i in self.devices["ip"]:
+                        bulb = Bulb(i)
+                        thread = threading.Thread(target=self.command_bulb, args=(bulb,control))
+                        threads.append(thread)
+                        thread.start()
+        
+            for thread in threads:
+                thread.join()
 
 
     def play_youtube_video_on_chromecast(self,query, mode):
